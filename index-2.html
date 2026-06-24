@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard ทารกจากมารดาใช้สารเสพติด — รพ.พัทลุง</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0f1923;
+    --surface: #162030;
+    --card: #1c2b3a;
+    --border: #243447;
+    --accent: #00c9a7;
+    --accent2: #ff6b6b;
+    --accent3: #ffd166;
+    --accent4: #6bcbff;
+    --text: #e8f0f7;
+    --muted: #7a95aa;
+    --admit-nicu: #ff6b6b;
+    --admit-pp: #ffd166;
+    --discharge: #00c9a7;
+    --lost: #a78bfa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left h1 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+  .header-left p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .last-update {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .btn-refresh {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-refresh:hover { opacity: 0.85; }
+  .btn-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Tabs */
+  .tabs {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    gap: 4px;
+  }
+  .tab {
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* Main */
+  .main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+  /* Tab panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* KPI Grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--kpi-color, var(--accent));
+  }
+  .kpi-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--kpi-color, var(--accent));
+    line-height: 1;
+  }
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* Status badges */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-nicu { background: rgba(255,107,107,0.15); color: var(--admit-nicu); }
+  .badge-pp { background: rgba(255,209,102,0.15); color: var(--admit-pp); }
+  .badge-discharge { background: rgba(0,201,167,0.15); color: var(--discharge); }
+  .badge-lost { background: rgba(167,139,250,0.15); color: var(--lost); }
+  .badge-yes { background: rgba(255,107,107,0.15); color: var(--admit-nicu); }
+  .badge-no { background: rgba(0,201,167,0.1); color: var(--muted); }
+  .badge-delay { background: rgba(255,209,102,0.15); color: var(--accent3); }
+  .badge-normal { background: rgba(0,201,167,0.1); color: var(--discharge); }
+
+  /* Table */
+  .table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .table-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .table-header h2 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .table-count {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .table-scroll { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(36,52,71,0.5);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .hn-cell {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--accent4);
+  }
+  .nas-high { color: var(--admit-nicu); font-weight: 700; }
+  .nas-mid { color: var(--accent3); }
+  .nas-low { color: var(--discharge); }
+
+  /* Chart bar */
+  .mini-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mini-bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .mini-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s ease;
+  }
+  .mini-bar-val {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* Section title */
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+    margin-top: 24px;
+  }
+
+  /* Two-col layout */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Info card */
+  .info-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .info-card h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 14px;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(36,52,71,0.5);
+    font-size: 13px;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-row-label { color: var(--muted); }
+  .info-row-val { font-weight: 600; }
+
+  /* Loading */
+  .loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .loading-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin: 0 3px;
+    animation: bounce 1.2s infinite;
+  }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Error */
+  .error-box {
+    background: rgba(255,107,107,0.08);
+    border: 1px solid rgba(255,107,107,0.3);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    color: var(--admit-nicu);
+    font-size: 13px;
+  }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+
+  /* Search */
+  .search-input {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: var(--text);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 13px;
+    outline: none;
+    width: 220px;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>🍼 Dashboard ทารกจากมารดาใช้สารเสพติด</h1>
+    <p>โรงพยาบาลพัทลุง — ข้อมูลจาก Google Sheets</p>
+  </div>
+  <div class="header-right">
+    <span class="last-update" id="lastUpdate">กำลังโหลด...</span>
+    <button class="btn-refresh" id="btnRefresh" onclick="loadAllData()">⟳ รีเฟรช</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('summary')">📊 ภาพรวม</div>
+  <div class="tab" onclick="switchTab('registry')">🗂 ทะเบียนผู้ป่วย</div>
+  <div class="tab" onclick="switchTab('development')">📈 พัฒนาการ</div>
+  <div class="tab" onclick="switchTab('social')">🏠 ติดตามสังคม</div>
+</div>
+
+<div class="main">
+
+  <!-- SUMMARY TAB -->
+  <div class="panel active" id="panel-summary">
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div>
+    </div>
+    <div class="grid-2" id="summaryCharts"></div>
+  </div>
+
+  <!-- REGISTRY TAB -->
+  <div class="panel" id="panel-registry">
+    <div class="filter-bar" id="registryFilters">
+      <input class="search-input" id="searchRegistry" placeholder="ค้นหา HN หรือชื่อ..." oninput="filterRegistry()">
+    </div>
+    <div class="table-wrap">
+      <div class="table-header">
+        <h2>ทะเบียนทารกทั้งหมด</h2>
+        <span class="table-count" id="registryCount">—</span>
+      </div>
+      <div class="table-scroll">
+        <table id="registryTable">
+          <thead>
+            <tr>
+              <th>HN</th><th>ชื่อ-สกุล</th><th>GA (สัปดาห์)</th>
+              <th>BW (กรัม)</th><th>สาร</th><th>NAS Max</th>
+              <th>LOS (วัน)</th><th>Ward</th><th>สถานะ</th>
+              <th>Re-admit</th><th>Lost FU</th>
+            </tr>
+          </thead>
+          <tbody id="registryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEVELOPMENT TAB -->
+  <div class="panel" id="panel-development">
+    <div class="filter-bar">
+      <input class="search-input" id="searchDev" placeholder="ค้นหา HN..." oninput="filterDev()">
+    </div>
+    <div class="table-wrap">
+      <div class="table-header">
+        <h2>ติดตามพัฒนาการ</h2>
+        <span class="table-count" id="devCount">—</span>
+      </div>
+      <div class="table-scroll">
+        <table id="devTable">
+          <thead>
+            <tr>
+              <th>HN</th><th>ชื่อ-สกุล</th><th>Visit (เดือน)</th>
+              <th>อายุ (เดือน)</th><th>น้ำหนัก (กก.)</th><th>ส่วนสูง (ซม.)</th>
+              <th>เส้นรอบศีรษะ (ซม.)</th><th>พัฒนาการ</th><th>นมแม่</th>
+              <th>Growth Restrict</th><th>Dev Delay</th><th>ผู้บันทึก</th>
+            </tr>
+          </thead>
+          <tbody id="devBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOCIAL TAB -->
+  <div class="panel" id="panel-social">
+    <div class="table-wrap">
+      <div class="table-header">
+        <h2>ติดตามครอบครัว/สังคม</h2>
+        <span class="table-count" id="socialCount">—</span>
+      </div>
+      <div class="table-scroll">
+        <table id="socialTable">
+          <thead>
+            <tr>
+              <th>HN</th><th>ชื่อ-สกุล</th><th>ผู้ดูแลหลัก</th>
+              <th>เบอร์โทร</th><th>ความสัมพันธ์</th><th>นักสังคมฯ</th>
+              <th>อสม.</th><th>วันเยี่ยมบ้านล่าสุด</th><th>ผลเยี่ยมบ้าน</th>
+            </tr>
+          </thead>
+          <tbody id="socialBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===== CONFIG =====
+const SHEET_ID = '1qjYPCcSikdzTMtOIK8_7jWMptlsycUDwo043EB4AYHk';
+const SHEETS = {
+  registry:    { gid: '0',          name: '1_PatientRegistry' },
+  development: { gid: '1829811063', name: '2_DevelopmentFollowUp' },
+  social:      { gid: '1713761352', name: '3_SocialFamilyFollowUp' },
+};
+
+let allData = { registry: [], development: [], social: [] };
+
+// ===== FETCH CSV =====
+async function fetchSheet(gid) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => obj[h.trim()] = (vals[i] || '').trim());
+    return obj;
+  }).filter(row => Object.values(row).some(v => v !== ''));
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') {
+      inQuotes = !inQuotes;
+    } else if (line[i] === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += line[i];
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+// ===== EXCEL DATE =====
+function excelDate(serial) {
+  if (!serial || isNaN(serial)) return '-';
+  const d = new Date((parseFloat(serial) - 25569) * 86400 * 1000);
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// ===== LOAD ALL =====
+async function loadAllData() {
+  const btn = document.getElementById('btnRefresh');
+  btn.disabled = true;
+  btn.textContent = '⟳ กำลังโหลด...';
+
+  try {
+    const [regCSV, devCSV, socCSV] = await Promise.all([
+      fetchSheet(SHEETS.registry.gid),
+      fetchSheet(SHEETS.development.gid),
+      fetchSheet(SHEETS.social.gid),
+    ]);
+
+    allData.registry    = parseCSV(regCSV);
+    allData.development = parseCSV(devCSV);
+    allData.social      = parseCSV(socCSV);
+
+    renderSummary();
+    renderRegistry();
+    renderDevelopment();
+    renderSocial();
+
+    document.getElementById('lastUpdate').textContent =
+      'อัปเดต: ' + new Date().toLocaleTimeString('th-TH');
+  } catch (e) {
+    document.getElementById('kpiGrid').innerHTML =
+      `<div class="error-box">⚠️ โหลดข้อมูลไม่สำเร็จ<br><small>${e.message}</small><br><br>ตรวจสอบว่า Google Sheet เปิด Public แล้ว</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⟳ รีเฟรช';
+  }
+}
+
+// ===== RENDER SUMMARY =====
+function renderSummary() {
+  const reg = allData.registry;
+  const dev = allData.development;
+  const soc = allData.social;
+
+  const total      = reg.length;
+  const nicu       = reg.filter(r => r['Ward ปัจจุบัน'] === 'NICU').length;
+  const pp         = reg.filter(r => r['Ward ปัจจุบัน'] === 'PP').length;
+  const discharge  = reg.filter(r => r['สถานะ'] && r['สถานะ'].includes('จำหน่าย')).length;
+  const readmit    = reg.filter(r => r['Re-admission ภายใน 1 ปี'] === 'ใช่').length;
+  const lostFU     = reg.filter(r => r['Lost Follow Up'] === 'ใช่').length;
+  const devDelay   = dev.filter(r => r['Development Delay'] === 'ใช่').length;
+  const growthRes  = dev.filter(r => r['Growth Restriction'] === 'ใช่').length;
+  const homeVisit  = soc.filter(r => r['วันที่เยี่ยมบ้านล่าสุด'] && r['วันที่เยี่ยมบ้านล่าสุด'] !== '').length;
+
+  const kpis = [
+    { label: 'ทารกทั้งหมด', value: total, color: '#6bcbff', sub: 'รายในระบบ' },
+    { label: 'Admit NICU', value: nicu, color: '#ff6b6b', sub: 'กำลัง Admit' },
+    { label: 'Admit PP/พิเศษ', value: pp, color: '#ffd166', sub: 'กำลัง Admit' },
+    { label: 'จำหน่ายแล้ว', value: discharge, color: '#00c9a7', sub: 'กลับบ้าน' },
+    { label: 'Re-admission', value: readmit, color: '#ff6b6b', sub: 'ภายใน 1 ปี' },
+    { label: 'Lost Follow Up', value: lostFU, color: '#a78bfa', sub: 'ขาดการติดตาม' },
+    { label: 'Dev Delay', value: devDelay, color: '#ffd166', sub: 'พัฒนาการล่าช้า' },
+    { label: 'Growth Restrict', value: growthRes, color: '#ff9f7f', sub: 'น้ำหนักต่ำกว่าเกณฑ์' },
+    { label: 'เยี่ยมบ้านแล้ว', value: homeVisit, color: '#00c9a7', sub: 'มีบันทึกเยี่ยม' },
+  ];
+
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
+    <div class="kpi-card" style="--kpi-color:${k.color}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>
+  `).join('');
+
+  // Charts
+  const statusCounts = {};
+  reg.forEach(r => {
+    const s = r['สถานะ'] || 'ไม่ระบุ';
+    statusCounts[s] = (statusCounts[s] || 0) + 1;
+  });
+
+  const drugCounts = {};
+  reg.forEach(r => {
+    const d = r['สารที่สัมผัส'] || 'ไม่ระบุ';
+    drugCounts[d] = (drugCounts[d] || 0) + 1;
+  });
+
+  const maxStatus = Math.max(...Object.values(statusCounts));
+  const maxDrug   = Math.max(...Object.values(drugCounts));
+
+  const statusColors = { 'Admit NICU': '#ff6b6b', 'Admit PP/พิเศษ': '#ffd166', 'จำหน่ายกลับบ้าน': '#00c9a7' };
+
+  document.getElementById('summaryCharts').innerHTML = `
+    <div class="info-card">
+      <h3>สถานะผู้ป่วย</h3>
+      ${Object.entries(statusCounts).map(([k,v]) => `
+        <div class="info-row">
+          <span class="info-row-label">${k}</span>
+          <div class="mini-bar" style="flex:1;margin:0 12px;">
+            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${(v/maxStatus)*100}%;background:${statusColors[k]||'#6bcbff'}"></div></div>
+            <span class="mini-bar-val">${v}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="info-card">
+      <h3>สารเสพติดที่สัมผัส</h3>
+      ${Object.entries(drugCounts).map(([k,v]) => `
+        <div class="info-row">
+          <span class="info-row-label">${k}</span>
+          <div class="mini-bar" style="flex:1;margin:0 12px;">
+            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${(v/maxDrug)*100}%;background:#6bcbff"></div></div>
+            <span class="mini-bar-val">${v}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ===== RENDER REGISTRY =====
+let registryFiltered = [];
+
+function renderRegistry() {
+  registryFiltered = [...allData.registry];
+  renderRegistryTable();
+}
+
+function filterRegistry() {
+  const q = document.getElementById('searchRegistry').value.toLowerCase();
+  registryFiltered = allData.registry.filter(r =>
+    (r['HN']||'').toLowerCase().includes(q) ||
+    (r['ชื่อ นามสกุล']||'').toLowerCase().includes(q)
+  );
+  renderRegistryTable();
+}
+
+function statusBadge(status) {
+  if (!status) return '<span class="badge badge-no">-</span>';
+  if (status.includes('NICU')) return `<span class="badge badge-nicu">${status}</span>`;
+  if (status.includes('PP')) return `<span class="badge badge-pp">${status}</span>`;
+  if (status.includes('จำหน่าย')) return `<span class="badge badge-discharge">${status}</span>`;
+  return `<span class="badge badge-lost">${status}</span>`;
+}
+
+function yesNoBadge(val) {
+  if (val === 'ใช่') return '<span class="badge badge-yes">ใช่</span>';
+  return '<span class="badge badge-no">ไม่</span>';
+}
+
+function nasClass(val) {
+  const n = parseFloat(val);
+  if (isNaN(n)) return '';
+  if (n >= 7) return 'nas-high';
+  if (n >= 4) return 'nas-mid';
+  return 'nas-low';
+}
+
+function renderRegistryTable() {
+  const tbody = document.getElementById('registryBody');
+  document.getElementById('registryCount').textContent = `${registryFiltered.length} ราย`;
+
+  if (!registryFiltered.length) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:30px">ไม่พบข้อมูล</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = registryFiltered.map(r => `
+    <tr>
+      <td class="hn-cell">${r['HN'] || '-'}</td>
+      <td>${r['ชื่อ นามสกุล'] || '-'}</td>
+      <td>${r['GA (สัปดาห์)'] || '-'}</td>
+      <td>${r['Birth Weight (กรัม)'] || '-'}</td>
+      <td><span style="font-size:12px">${r['สารที่สัมผัส'] || '-'}</span></td>
+      <td class="${nasClass(r['NAS Score (max)'])}">${r['NAS Score (max)'] || '-'}</td>
+      <td>${r['LOS (วัน)'] || '-'}</td>
+      <td>${r['Ward ปัจจุบัน'] || '-'}</td>
+      <td>${statusBadge(r['สถานะ'])}</td>
+      <td>${yesNoBadge(r['Re-admission ภายใน 1 ปี'])}</td>
+      <td>${yesNoBadge(r['Lost Follow Up'])}</td>
+    </tr>
+  `).join('');
+}
+
+// ===== RENDER DEVELOPMENT =====
+let devFiltered = [];
+
+function renderDevelopment() {
+  devFiltered = [...allData.development];
+  renderDevTable();
+}
+
+function filterDev() {
+  const q = document.getElementById('searchDev').value.toLowerCase();
+  devFiltered = allData.development.filter(r =>
+    (r['HN']||'').toLowerCase().includes(q) ||
+    (r['ชื่อ นามสกุล']||'').toLowerCase().includes(q)
+  );
+  renderDevTable();
+}
+
+function devBadge(val) {
+  if (val === 'ล่าช้า' || val === 'ใช่') return `<span class="badge badge-delay">${val}</span>`;
+  if (val === 'ปกติ' || val === 'ไม่') return `<span class="badge badge-normal">${val}</span>`;
+  return val || '-';
+}
+
+function renderDevTable() {
+  const tbody = document.getElementById('devBody');
+  document.getElementById('devCount').textContent = `${devFiltered.length} รายการ`;
+
+  tbody.innerHTML = devFiltered.map(r => `
+    <tr>
+      <td class="hn-cell">${r['HN'] || '-'}</td>
+      <td>${r['ชื่อ นามสกุล'] || '-'}</td>
+      <td>${r['Visit (เดือน)'] || '-'}</td>
+      <td>${r['อายุ (เดือน)'] || '-'}</td>
+      <td>${r['น้ำหนัก (กก.)'] || '-'}</td>
+      <td>${r['ส่วนสูง (ซม.)'] || '-'}</td>
+      <td>${r['เส้นรอบศีรษะ (ซม.)'] || '-'}</td>
+      <td>${devBadge(r['พัฒนาการ'])}</td>
+      <td>${r['นมแม่'] || '-'}</td>
+      <td>${devBadge(r['Growth Restriction'])}</td>
+      <td>${devBadge(r['Development Delay'])}</td>
+      <td style="font-size:12px;color:var(--muted)">${r['ผู้บันทึก'] || '-'}</td>
+    </tr>
+  `).join('');
+}
+
+// ===== RENDER SOCIAL =====
+function renderSocial() {
+  const soc = allData.social;
+  const tbody = document.getElementById('socialBody');
+  document.getElementById('socialCount').textContent = `${soc.length} ราย`;
+
+  tbody.innerHTML = soc.map(r => {
+    const visitResult = r['ผลการเยี่ยมบ้าน'] || '-';
+    const resultColor = visitResult === 'ต้องติดตาม' ? 'var(--accent3)' :
+                        visitResult === 'Lost Follow Up' ? 'var(--lost)' : 'var(--discharge)';
+    return `
+      <tr>
+        <td class="hn-cell">${r['HN'] || '-'}</td>
+        <td>${r['ชื่อ นามสกุล'] || '-'}</td>
+        <td>${r['ผู้ดูแลหลัก (ชื่อ)'] || '-'}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${r['ผู้ดูแลหลัก (เบอร์โทร)'] || '-'}</td>
+        <td>${r['ความสัมพันธ์กับทารก'] || '-'}</td>
+        <td style="font-size:12px">${r['นักสังคมสงเคราะห์ (ชื่อ)'] || '-'}</td>
+        <td style="font-size:12px">${r['อสม (ชื่อ)'] || '-'}</td>
+        <td style="font-size:12px;color:var(--muted)">${excelDate(r['วันที่เยี่ยมบ้านล่าสุด'])}</td>
+        <td style="color:${resultColor};font-weight:600">${visitResult}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ===== TAB SWITCH =====
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const tabs = ['summary','registry','development','social'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${tab}`).classList.add('active');
+}
+
+// ===== INIT =====
+loadAllData();
+</script>
+</body>
+</html>
