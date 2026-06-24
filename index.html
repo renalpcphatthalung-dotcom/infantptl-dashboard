@@ -481,18 +481,18 @@
 
 <script>
 // ===== CONFIG =====
-const SHEET_ID = '1qjYPCcSikdzTMtOIK8_7jWMptlsycUDwo043EB4AYHk';
+const SHEET_ID = '10TLFBMHwX8qq9QQr5q6iPJCeFfs4cBIY1Jn_RztTDLk';
 const SHEETS = {
-  registry:    { gid: '0',          name: '1_PatientRegistry' },
-  development: { gid: '1829811063', name: '2_DevelopmentFollowUp' },
-  social:      { gid: '1713761352', name: '3_SocialFamilyFollowUp' },
+  registry:    '1_PatientRegistry',
+  development: '2_DevelopmentFollowUp',
+  social:      '3_SocialFamilyFollowUp',
 };
 
 let allData = { registry: [], development: [], social: [] };
 
 // ===== FETCH CSV =====
-async function fetchSheet(gid) {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+async function fetchSheet(sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.text();
@@ -544,9 +544,9 @@ async function loadAllData() {
 
   try {
     const [regCSV, devCSV, socCSV] = await Promise.all([
-      fetchSheet(SHEETS.registry.gid),
-      fetchSheet(SHEETS.development.gid),
-      fetchSheet(SHEETS.social.gid),
+      fetchSheet(SHEETS.registry),
+      fetchSheet(SHEETS.development),
+      fetchSheet(SHEETS.social),
     ]);
 
     allData.registry    = parseCSV(regCSV);
